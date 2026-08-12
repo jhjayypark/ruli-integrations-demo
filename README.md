@@ -7,13 +7,16 @@ This is a **read-only slice**, not a runnable app — it omits the app shell, de
 ## What it does
 
 - **Integrations page** (`app/(assistant-demo)/assistant/demo/integrations/page.tsx`)
-  - Popular row (Gmail / Google Drive / Slack compact connect cards)
-  - Category filter tabs: All / Comms / Sales / Ticketing / Knowledge / Corporate / Legal
+  - Popular row (Gmail / Google Drive / Slack compact connect cards, single row)
+  - Sticky category tab bar (All / Comms / Sales / Ticketing / Knowledge / Corporate / Legal) with a name-search input; gains a bottom border + shadow only while stuck (IntersectionObserver sentinel)
   - 29 connectors + Word Extension, each with Connect (1.2 s mock OAuth) / Disconnect (confirm dialog)
 - **Chat "Files and Sources" menu** (`app/(assistant-demo)/assistant/demo/chat/page.tsx`, see `V3SourcesDropdown`)
   - Claude-connectors-style flyout: opens on hover, trigger row stays highlighted while open, closes when another menu item is hovered
   - Top entry **Manage integrations** → the Integrations page
   - Lists **connected integrations only**, each a per-chat toggle (default ON); connecting on the page makes the app appear here immediately
+- **Selected-integrations icon stack** (`SelectedIntegrationsStack` in the chat page)
+  - Overlapping circular chips next to Files and Sources showing what's enabled (up to 5 icons, else 4 + "+N")
+  - Hover peeks a read-only list; click switches the same popover to the toggle menu (PopoverAnchor + controlled open to avoid Radix trigger toggle-close)
 
 ## Key files
 

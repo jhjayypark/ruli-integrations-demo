@@ -7,7 +7,7 @@ import { HighlightedInput } from "@/components/HighlightedInput";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { IconFile } from "@/components/ui/icons";
 import TextAutoEllipsis from "@/components/TextAutoEllipsis";
@@ -46,7 +46,6 @@ import {
   FolderIcon,
   FolderPlus,
   GlobeIcon,
-  Grid2x2Plus,
   Lock,
   MicIcon,
   PaperclipIcon,
@@ -963,6 +962,149 @@ function V3LegalDatabaseDialog({
 }
 
 // ---------------------------------------------------------------------------
+// Selected integrations stack — overlapping icon chips next to Files and
+// Sources. Hover peeks the enabled list; click opens the toggle menu.
+// ---------------------------------------------------------------------------
+function SelectedIntegrationsStack({
+  connectedIntegrations,
+  integrationsOff,
+  onToggleIntegration,
+}: {
+  connectedIntegrations: DemoIntegrationItem[];
+  integrationsOff: Set<string>;
+  onToggleIntegration: (id: string, enabled: boolean) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<"peek" | "menu">("peek");
+  const closeTimer = useRef<number | null>(null);
+
+  const cancelClose = useCallback(() => {
+    if (closeTimer.current) {
+      window.clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  }, []);
+
+  const scheduleClose = useCallback(() => {
+    cancelClose();
+    closeTimer.current = window.setTimeout(() => setOpen(false), 150);
+  }, [cancelClose]);
+
+  useEffect(() => cancelClose, [cancelClose]);
+
+  const enabled = connectedIntegrations.filter((item) => !integrationsOff.has(item.id));
+  if (enabled.length === 0) return null;
+
+  const shown = enabled.length <= 5 ? enabled : enabled.slice(0, 4);
+  const extra = enabled.length - shown.length;
+  const rowClass =
+    "relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 font-medium outline-none hover:bg-muted hover:text-secondary-foreground";
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setMode("peek");
+      }}
+    >
+      <PopoverAnchor asChild>
+        <button
+          type="button"
+          aria-label={`${enabled.length} integrations enabled for this chat`}
+          className="flex items-center rounded-full px-1 py-0.5 transition-colors hover:bg-secondary"
+          onPointerEnter={() => {
+            cancelClose();
+            if (!open) {
+              setMode("peek");
+              setOpen(true);
+            }
+          }}
+          onPointerLeave={() => {
+            if (mode === "peek") scheduleClose();
+          }}
+          onClick={() => {
+            cancelClose();
+            setMode("menu");
+            setOpen(true);
+          }}
+        >
+          {shown.map((item, i) => (
+            <span
+              key={item.id}
+              className={cn(
+                "flex size-7 items-center justify-center rounded-full border-2 border-background bg-card shadow-sm",
+                i > 0 && "-ml-2",
+              )}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={item.icon} alt="" className="size-4" />
+            </span>
+          ))}
+          {extra > 0 && (
+            <span className="-ml-2 flex size-7 items-center justify-center rounded-full border-2 border-background bg-card text-2xs font-medium text-muted-foreground shadow-sm">
+              +{extra}
+            </span>
+          )}
+        </button>
+      </PopoverAnchor>
+      <PopoverContent
+        side="top"
+        align="start"
+        className="whitespace-nowrap p-1"
+        style={{ minWidth: 240 }}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onPointerEnter={cancelClose}
+        onPointerLeave={() => {
+          if (mode === "peek") scheduleClose();
+        }}
+      >
+        <p className="px-2 py-1 text-2xs text-muted-foreground">
+          {enabled.length} integration{enabled.length > 1 ? "s" : ""} enabled for this chat
+        </p>
+        {mode === "peek" ? (
+          <div className="max-h-72 overflow-y-auto">
+            {enabled.map((item) => (
+              <div key={item.id} className="flex items-center gap-2 rounded-sm px-2 py-1.5 font-medium">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={item.icon} alt="" className="size-4 shrink-0" />
+                <span className="flex-1 pr-2">{item.name}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="max-h-72 overflow-y-auto">
+            {connectedIntegrations.map((item) => {
+              const on = !integrationsOff.has(item.id);
+              return (
+                <div key={item.id} className={rowClass} onClick={() => onToggleIntegration(item.id, !on)}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={item.icon} alt="" className="size-4 shrink-0" />
+                  <span className="flex-1 pr-2">{item.name}</span>
+                  <Switch
+                    type="button"
+                    size="sm"
+                    checked={on}
+                    aria-label={`Use ${item.name}`}
+                    onClick={(e) => e.stopPropagation()}
+                    onCheckedChange={(next) => onToggleIntegration(item.id, next)}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
+        <div className="mx-2 my-1 h-px bg-border" />
+        <Link href="/assistant/demo/integrations" prefetch={false} className={rowClass} onClick={() => setOpen(false)}>
+          <WorkflowIcon className="icon" />
+          Manage integrations
+        </Link>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // V3 SourcesDropdown — all legal databases listed inline under section header
 // ---------------------------------------------------------------------------
 function V3SourcesDropdown({
@@ -1054,13 +1196,6 @@ function V3SourcesDropdown({
             Attach files
           </div>
 
-          {/* Google Drive */}
-          <div className={itemClass} onClick={() => handleItem("Google Drive")}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logos/logo_googledrive.svg" alt="Google Drive" className="icon size-5" />
-            Add from Google Drive
-          </div>
-
           {/* Integrations — Claude-style: manage link + connected apps with per-chat toggles */}
           <Popover open={integrationsOpen} onOpenChange={setIntegrationsOpen}>
             <PopoverTrigger asChild>
@@ -1070,7 +1205,7 @@ function V3SourcesDropdown({
                 onPointerEnter={() => setIntegrationsOpen(true)}
                 onClick={() => setIntegrationsOpen(true)}
               >
-                <Grid2x2Plus className="icon" />
+                <WorkflowIcon className="icon" />
                 <span className="flex-1">Integrations</span>
                 <ChevronRight className="size-4 text-muted-foreground" />
               </div>
@@ -1434,6 +1569,12 @@ function V2ChatForm({
                   onAddFiles={onAddFiles}
                   selectedSources={selectedSources}
                   onToggleSource={onToggleSource}
+                  connectedIntegrations={connectedIntegrations}
+                  integrationsOff={integrationsOff}
+                  onToggleIntegration={onToggleIntegration}
+                />
+
+                <SelectedIntegrationsStack
                   connectedIntegrations={connectedIntegrations}
                   integrationsOff={integrationsOff}
                   onToggleIntegration={onToggleIntegration}
