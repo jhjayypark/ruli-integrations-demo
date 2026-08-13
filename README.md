@@ -14,6 +14,8 @@ This is a **read-only slice**, not a runnable app — it omits the app shell, de
   - Claude-connectors-style flyout: opens on hover, trigger row stays highlighted while open, closes when another menu item is hovered
   - Top entry **Manage integrations** → the Integrations page
   - Lists **connected integrations only**, each a per-chat toggle (default ON); connecting on the page makes the app appear here immediately
+- **Cloud file picking** (`CloudPickerDialog` in the chat page)
+  - Each connected cloud-drive integration gets an "Add from X" row under Attach files; a mock file browser adds picked files to the chat's attached sources (already-added files are marked)
 - **Selected-integrations icon stack** (`SelectedIntegrationsStack` in the chat page)
   - Overlapping circular chips next to Files and Sources showing what's enabled (up to 5 icons, else 4 + "+N")
   - Hover peeks a read-only list; click switches the same popover to the toggle menu (PopoverAnchor + controlled open to avoid Radix trigger toggle-close)
