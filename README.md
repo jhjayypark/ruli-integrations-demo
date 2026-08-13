@@ -11,15 +11,14 @@ This is a **read-only slice**, not a runnable app — it omits the app shell, de
   - Sticky category tab bar (All / Comms / Sales / Ticketing / Knowledge / Corporate / Legal) with a name-search input; gains a bottom border + shadow only while stuck (IntersectionObserver sentinel)
   - 29 connectors + Word Extension, each with Connect (1.2 s mock OAuth) / Disconnect (confirm dialog)
 - **Chat "Files and Sources" menu** (`app/(assistant-demo)/assistant/demo/chat/page.tsx`, see `V3SourcesDropdown`)
-  - Claude-connectors-style flyout: opens on hover, trigger row stays highlighted while open, closes when another menu item is hovered
-  - Top entry **Manage integrations** → the Integrations page
-  - Lists **connected integrations only**, each a per-chat toggle (default ON); connecting on the page makes the app appear here immediately
+  - Kept minimal: Attach files / Add from Cloud / Knowledge Base / Legal Database — integration toggles live in the composer icon stack instead
 - **Add from Cloud modal** (`AddFromCloudDialog.tsx` — ported from production `CloudDriveFileSelector`, reusing the real `FileExplorer`)
   - Single "Add from Cloud" row under Attach files opens the production cloud selector: per-drive icon switcher (selected in color+shadow, rest grayscale), Integrations button, breadcrumbs, folder navigation, contextual search, shift+click range select
   - Backed by mock per-drive folder trees; drives follow the connection store; already-attached files are disabled; Confirm adds the selection to the chat's sources
 - **Selected-integrations icon stack** (`SelectedIntegrationsStack` in the chat page)
   - Overlapping circular chips next to Files and Sources showing what's enabled (up to 5 icons, else 4 + "+N")
   - Hover peeks a read-only list; click switches the same popover to the toggle menu (PopoverAnchor + controlled open to avoid Radix trigger toggle-close)
+  - The single place to see and toggle integrations; stays visible in grayscale when everything is off so the menu can always be reopened
 
 ## Key files
 

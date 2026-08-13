@@ -998,10 +998,12 @@ function SelectedIntegrationsStack({
   useEffect(() => cancelClose, [cancelClose]);
 
   const enabled = connectedIntegrations.filter((item) => !integrationsOff.has(item.id));
-  if (enabled.length === 0) return null;
+  if (connectedIntegrations.length === 0) return null;
 
-  const shown = enabled.length <= 5 ? enabled : enabled.slice(0, 4);
-  const extra = enabled.length - shown.length;
+  const display = enabled.length > 0 ? enabled : connectedIntegrations;
+  const allOff = enabled.length === 0;
+  const shown = display.length <= 5 ? display : display.slice(0, 4);
+  const extra = display.length - shown.length;
   const rowClass =
     "relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 font-medium outline-none hover:bg-muted hover:text-secondary-foreground";
 
@@ -1040,6 +1042,7 @@ function SelectedIntegrationsStack({
               className={cn(
                 "flex size-7 items-center justify-center rounded-full border-2 border-background bg-card shadow-sm",
                 i > 0 && "-ml-2",
+                allOff && "opacity-60 grayscale",
               )}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1065,7 +1068,9 @@ function SelectedIntegrationsStack({
         }}
       >
         <p className="px-2 py-1 text-2xs text-muted-foreground">
-          {enabled.length} integration{enabled.length > 1 ? "s" : ""} enabled for this chat
+          {enabled.length > 0
+            ? `${enabled.length} integration${enabled.length > 1 ? "s" : ""} enabled for this chat`
+            : "No integrations enabled for this chat"}
         </p>
         {mode === "peek" ? (
           <div className="max-h-72 overflow-y-auto">
@@ -1116,28 +1121,16 @@ function V3SourcesDropdown({
   onAddFiles,
   selectedSources,
   onToggleSource,
-  connectedIntegrations,
-  integrationsOff,
-  onToggleIntegration,
   onAddFromCloud,
 }: {
   onAddFiles: () => void;
   selectedSources: Set<string>;
   onToggleSource: (id: string) => void;
-  connectedIntegrations: DemoIntegrationItem[];
-  integrationsOff: Set<string>;
-  onToggleIntegration: (id: string, enabled: boolean) => void;
   onAddFromCloud: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [integrationsOpen, setIntegrationsOpen] = useState(false);
-  const integrationsRowRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollDown, setCanScrollDown] = useState(false);
-
-  useEffect(() => {
-    if (!open) setIntegrationsOpen(false);
-  }, [open]);
 
   const checkScroll = useCallback(() => {
     const el = scrollRef.current;
@@ -1174,23 +1167,7 @@ function V3SourcesDropdown({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="rounded-2xl p-1" sideOffset={4} style={{ minWidth: 244 }}>
-        <div
-          ref={scrollRef}
-          className="max-h-80 overflow-y-auto whitespace-nowrap"
-          onScroll={checkScroll}
-          onPointerOver={(e) => {
-            // Hovering any other menu item closes the Integrations flyout.
-            // Portal events bubble through the React tree, so require the
-            // target to be DOM-inside this menu (flyout hovers don't count).
-            if (
-              integrationsOpen &&
-              e.currentTarget.contains(e.target as Node) &&
-              !integrationsRowRef.current?.contains(e.target as Node)
-            ) {
-              setIntegrationsOpen(false);
-            }
-          }}
-        >
+        <div ref={scrollRef} className="max-h-80 overflow-y-auto whitespace-nowrap" onScroll={checkScroll}>
           {/* Attach files */}
           <div
             className={itemClass}
@@ -1214,69 +1191,6 @@ function V3SourcesDropdown({
             <UploadCloudIcon className="icon" />
             Add from Cloud
           </div>
-
-          {/* Integrations — Claude-style: manage link + connected apps with per-chat toggles */}
-          <Popover open={integrationsOpen} onOpenChange={setIntegrationsOpen}>
-            <PopoverTrigger asChild>
-              <div
-                ref={integrationsRowRef}
-                className={cn(itemClass, integrationsOpen && "bg-secondary text-secondary-foreground")}
-                onPointerEnter={() => setIntegrationsOpen(true)}
-                onClick={() => setIntegrationsOpen(true)}
-              >
-                <WorkflowIcon className="icon" />
-                <span className="flex-1">Integrations</span>
-                <ChevronRight className="size-4 text-muted-foreground" />
-              </div>
-            </PopoverTrigger>
-            <PopoverContent
-              side="right"
-              align="start"
-              className="min-w-min whitespace-nowrap p-1"
-              style={{ minWidth: 230 }}
-            >
-              <Link
-                href="/assistant/demo/integrations"
-                prefetch={false}
-                className={itemClass}
-                onClick={() => setIntegrationsOpen(false)}
-              >
-                <WorkflowIcon className="icon" />
-                Manage integrations
-              </Link>
-              {connectedIntegrations.length > 0 ? (
-                <>
-                  <div className="mx-2 my-1 h-px bg-border" />
-                  <div className="max-h-72 space-y-1 overflow-y-auto">
-                    {connectedIntegrations.map((item) => {
-                      const enabled = !integrationsOff.has(item.id);
-                      return (
-                        <div
-                          key={item.id}
-                          className="relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 font-medium outline-none hover:bg-muted hover:text-secondary-foreground"
-                          onClick={() => onToggleIntegration(item.id, !enabled)}
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={item.icon} alt="" className="size-4 shrink-0" />
-                          <span className="flex-1 pr-2">{item.name}</span>
-                          <Switch
-                            type="button"
-                            size="sm"
-                            checked={enabled}
-                            aria-label={`Use ${item.name}`}
-                            onClick={(e) => e.stopPropagation()}
-                            onCheckedChange={(next) => onToggleIntegration(item.id, next)}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              ) : (
-                <div className="px-2 py-1.5 text-2xs text-muted-foreground">No integrations connected yet.</div>
-              )}
-            </PopoverContent>
-          </Popover>
 
           {/* Knowledge Base section header */}
           <div className="my-1 flex items-center px-2">
@@ -1590,9 +1504,6 @@ function V2ChatForm({
                   onAddFiles={onAddFiles}
                   selectedSources={selectedSources}
                   onToggleSource={onToggleSource}
-                  connectedIntegrations={connectedIntegrations}
-                  integrationsOff={integrationsOff}
-                  onToggleIntegration={onToggleIntegration}
                   onAddFromCloud={onAddFromCloud}
                 />
 
