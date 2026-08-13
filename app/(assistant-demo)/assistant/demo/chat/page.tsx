@@ -55,12 +55,13 @@ import {
   SparklesIcon,
   Table2Icon,
   TrashIcon,
-  UploadCloudIcon,
+  DownloadCloudIcon,
   WorkflowIcon,
   XIcon,
 } from "@/components/ui/lucide-shim";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { LoadingButton } from "@/components/ui/loading-button";
 import { Switch } from "@/components/ui/switch";
 import { AddFromCloudDialog } from "./AddFromCloudDialog";
 import { useGoogleWorkspaceDemoConnections } from "@/lib/mock/google-workspace-demo";
@@ -970,6 +971,11 @@ function V3LegalDatabaseDialog({
 // Selected integrations stack — overlapping icon chips next to Files and
 // Sources. Hover peeks the enabled list; click opens the toggle menu.
 // ---------------------------------------------------------------------------
+const TOP_USED_INTEGRATION_IDS = ["gmail", "google-drive", "slack", "google-calendar", "notion"];
+const TOP_USED_INTEGRATIONS = TOP_USED_INTEGRATION_IDS.map((id) =>
+  DEMO_INTEGRATION_CATEGORIES.flatMap((c) => c.items).find((it) => it.id === id),
+).filter((it): it is DemoIntegrationItem => Boolean(it));
+
 function SelectedIntegrationsStack({
   connectedIntegrations,
   integrationsOff,
@@ -982,6 +988,30 @@ function SelectedIntegrationsStack({
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"peek" | "menu">("peek");
   const closeTimer = useRef<number | null>(null);
+  const gw = useGoogleWorkspaceDemoConnections();
+  const generic = useDemoIntegrationConnections();
+  const [connectingIds, setConnectingIds] = useState<string[]>([]);
+  const connectTimers = useRef<number[]>([]);
+
+  useEffect(() => {
+    const timers = connectTimers.current;
+    return () => {
+      timers.forEach((t) => window.clearTimeout(t));
+    };
+  }, []);
+
+  const handleConnect = (item: DemoIntegrationItem): void => {
+    setConnectingIds((prev) => [...prev, item.id]);
+    const timer = window.setTimeout(() => {
+      if (item.googleWorkspaceApp) {
+        gw.connect(item.googleWorkspaceApp);
+      } else {
+        generic.connect(item.id);
+      }
+      setConnectingIds((prev) => prev.filter((it) => it !== item.id));
+    }, 1200);
+    connectTimers.current.push(timer);
+  };
 
   const cancelClose = useCallback(() => {
     if (closeTimer.current) {
@@ -998,10 +1028,12 @@ function SelectedIntegrationsStack({
   useEffect(() => cancelClose, [cancelClose]);
 
   const enabled = connectedIntegrations.filter((item) => !integrationsOff.has(item.id));
-  if (connectedIntegrations.length === 0) return null;
+  const noneConnected = connectedIntegrations.length === 0;
 
-  const display = enabled.length > 0 ? enabled : connectedIntegrations;
-  const allOff = enabled.length === 0;
+  // Nothing connected: surface the top-used integrations greyed out so users
+  // discover they can connect apps to Ruli right from the composer.
+  const display = noneConnected ? TOP_USED_INTEGRATIONS : enabled.length > 0 ? enabled : connectedIntegrations;
+  const allOff = noneConnected || enabled.length === 0;
   const shown = display.length <= 5 ? display : display.slice(0, 4);
   const extra = display.length - shown.length;
   const rowClass =
@@ -1018,7 +1050,7 @@ function SelectedIntegrationsStack({
       <PopoverAnchor asChild>
         <button
           type="button"
-          aria-label={`${enabled.length} integrations enabled for this chat`}
+          aria-label={noneConnected ? "Connect integrations" : `${enabled.length} integrations enabled for this chat`}
           className="flex items-center rounded-full px-1 py-0.5 transition-colors hover:bg-secondary"
           onPointerEnter={() => {
             cancelClose();
@@ -1068,11 +1100,31 @@ function SelectedIntegrationsStack({
         }}
       >
         <p className="px-2 py-1 text-2xs text-muted-foreground">
-          {enabled.length > 0
-            ? `${enabled.length} integration${enabled.length > 1 ? "s" : ""} enabled for this chat`
-            : "No integrations enabled for this chat"}
+          {noneConnected
+            ? "Connect apps so Ruli can search them in chat"
+            : enabled.length > 0
+              ? `${enabled.length} integration${enabled.length > 1 ? "s" : ""} enabled for this chat`
+              : "No integrations enabled for this chat"}
         </p>
-        {mode === "peek" ? (
+        {noneConnected ? (
+          <div className="max-h-72 overflow-y-auto">
+            {TOP_USED_INTEGRATIONS.map((item) => (
+              <div key={item.id} className="flex items-center gap-2 rounded-sm px-2 py-1.5 font-medium">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={item.icon} alt="" className="size-4 shrink-0 opacity-70 grayscale" />
+                <span className="flex-1 pr-2">{item.name}</span>
+                <LoadingButton
+                  size="sm"
+                  variant="outline"
+                  loading={connectingIds.includes(item.id)}
+                  onClick={() => handleConnect(item)}
+                >
+                  Connect
+                </LoadingButton>
+              </div>
+            ))}
+          </div>
+        ) : mode === "peek" ? (
           <div className="max-h-72 overflow-y-auto">
             {enabled.map((item) => (
               <div key={item.id} className="flex items-center gap-2 rounded-sm px-2 py-1.5 font-medium">
@@ -1188,8 +1240,8 @@ function V3SourcesDropdown({
               onAddFromCloud();
             }}
           >
-            <UploadCloudIcon className="icon" />
-            Add from Cloud
+            <DownloadCloudIcon className="icon" />
+            Add Cloud Files
           </div>
 
           {/* Knowledge Base section header */}

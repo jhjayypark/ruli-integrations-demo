@@ -90,15 +90,12 @@ export default function DemoIntegrationsPage() {
   }
 
   const q = query.trim().toLowerCase();
-  const visibleSections = DEMO_INTEGRATION_CATEGORIES.filter(
+  const visibleItems = DEMO_INTEGRATION_CATEGORIES.filter(
     (section) => activeTab === "All" || section.category === activeTab,
   )
-    .map((section) => ({
-      ...section,
-      items: section.items.filter((item) => !q || item.name.toLowerCase().includes(q)),
-    }))
-    .filter((section) => section.items.length > 0);
-  const showApps = activeTab === "All" && (!q || "word extension".includes(q));
+    .flatMap((section) => section.items)
+    .filter((item) => !q || item.name.toLowerCase().includes(q));
+  const showWordExtension = activeTab === "All" && (!q || "word extension".includes(q));
 
   return (
     <>
@@ -170,51 +167,41 @@ export default function DemoIntegrationsPage() {
           </div>
         </div>
 
-        {visibleSections.map((section) => (
-          <div key={section.category} className="flex flex-col gap-3">
-            <h2 className="font-medium">{section.category}</h2>
-            <div className="grid w-full grid-cols-1 gap-4 @md/main:grid-cols-2 @xl/main:grid-cols-3">
-              {section.items.map((item) => (
-                <IntegrationCard
-                  key={item.id}
-                  name={item.name}
-                  description={item.description}
-                  icon={item.icon}
-                  isConnected={isConnected(item)}
-                  isConnecting={connectingIds.includes(item.id)}
-                  onConnect={() => handleConnect(item)}
-                  onDisconnect={() => handleDisconnect(item)}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
-        {visibleSections.length === 0 && !showApps && (
+        <div className="grid w-full grid-cols-1 gap-4 @md/main:grid-cols-2 @xl/main:grid-cols-3">
+          {visibleItems.map((item) => (
+            <IntegrationCard
+              key={item.id}
+              name={item.name}
+              description={item.description}
+              icon={item.icon}
+              isConnected={isConnected(item)}
+              isConnecting={connectingIds.includes(item.id)}
+              onConnect={() => handleConnect(item)}
+              onDisconnect={() => handleDisconnect(item)}
+            />
+          ))}
+          {showWordExtension && (
+            <IntegrationCard
+              name="Word Extension"
+              description="Enhance your legal document review with Ruli Word Extension. (Subscription Required)"
+              icon="/logos/logo_word.svg"
+              renderButton={() => (
+                <a
+                  href="https://appsource.microsoft.com/en-us/product/office/WA200008041"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Button variant="outline">
+                    <ExternalLinkIcon className="icon mr-2" />
+                    Install
+                  </Button>
+                </a>
+              )}
+            />
+          )}
+        </div>
+        {visibleItems.length === 0 && !showWordExtension && (
           <p className="py-8 text-center text-muted-foreground">No integrations match &ldquo;{query}&rdquo;.</p>
-        )}
-        {showApps && (
-          <div className="flex flex-col gap-3">
-            <h2 className="font-medium">Apps</h2>
-            <div className="grid w-full grid-cols-1 gap-4 @md/main:grid-cols-2 @xl/main:grid-cols-3">
-              <IntegrationCard
-                name="Word Extension"
-                description="Enhance your legal document review with Ruli Word Extension. (Subscription Required)"
-                icon="/logos/logo_word.svg"
-                renderButton={() => (
-                  <a
-                    href="https://appsource.microsoft.com/en-us/product/office/WA200008041"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Button variant="outline">
-                      <ExternalLinkIcon className="icon mr-2" />
-                      Install
-                    </Button>
-                  </a>
-                )}
-              />
-            </div>
-          </div>
         )}
       </div>
     </>

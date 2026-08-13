@@ -191,7 +191,7 @@ export function AddFromCloudDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="max-w-4xl">
         <DialogHeader>
-          <DialogTitle>Add from Cloud</DialogTitle>
+          <DialogTitle>Add Cloud Files</DialogTitle>
         </DialogHeader>
         {connectedDrives.length === 0 || !drive ? (
           <Card className="flex flex-col items-center justify-center gap-6 px-4 py-6">
