@@ -55,12 +55,14 @@ import {
   SparklesIcon,
   Table2Icon,
   TrashIcon,
+  UploadCloudIcon,
   WorkflowIcon,
   XIcon,
 } from "@/components/ui/lucide-shim";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { AddFromCloudDialog } from "./AddFromCloudDialog";
 import { useGoogleWorkspaceDemoConnections } from "@/lib/mock/google-workspace-demo";
 import {
   DEMO_INTEGRATION_CATEGORIES,
@@ -102,32 +104,6 @@ const MOCK_FILE_POOL: MockFile[] = [
 
 // Cloud-drive integrations that support picking files into the chat.
 const CLOUD_DRIVE_IDS = ["google-drive", "onedrive-sharepoint", "dropbox", "box"];
-
-const MOCK_CLOUD_FILES: Record<string, MockFile[]> = {
-  "google-drive": [
-    { id: "gd1", name: "MSA - Meridian Health - Draft v4.docx" },
-    { id: "gd2", name: "Acme MSA - Indemnification redline.docx" },
-    { id: "gd3", name: "Vendor Onboarding Checklist 2026.pdf" },
-    { id: "gd4", name: "Board Consent - Series B.pdf" },
-    { id: "gd5", name: "DPA Template (EU) v3.docx" },
-  ],
-  "onedrive-sharepoint": [
-    { id: "sp1", name: "Legal/Contracts/SOW - Delta Logistics.docx" },
-    { id: "sp2", name: "Legal/Policies/Records Retention Policy.pdf" },
-    { id: "sp3", name: "Legal/Contracts/License Agreement - Kite Analytics.pdf" },
-    { id: "sp4", name: "HR/Employment Agreement Template.docx" },
-  ],
-  dropbox: [
-    { id: "db1", name: "Signed/NDA - Northwind - Executed.pdf" },
-    { id: "db2", name: "Signed/Lease Amendment No. 2.pdf" },
-    { id: "db3", name: "Diligence/Cap Table Snapshot.xlsx" },
-  ],
-  box: [
-    { id: "bx1", name: "Litigation Hold Notice - Case 26-114.pdf" },
-    { id: "bx2", name: "Settlement Agreement - Draft.docx" },
-    { id: "bx3", name: "Expert Report - Damages.pdf" },
-  ],
-};
 
 // ---------------------------------------------------------------------------
 // Citations initializer (same as v1)
@@ -991,100 +967,6 @@ function V3LegalDatabaseDialog({
 }
 
 // ---------------------------------------------------------------------------
-// Cloud file picker - mock browser for a connected cloud-drive integration.
-// ---------------------------------------------------------------------------
-function CloudPickerDialog({
-  drive,
-  attachedIds,
-  onOpenChange,
-  onAdd,
-}: {
-  drive: DemoIntegrationItem | null;
-  attachedIds: Set<string>;
-  onOpenChange: (open: boolean) => void;
-  onAdd: (drive: DemoIntegrationItem, files: MockFile[]) => void;
-}) {
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    if (drive) setSelected(new Set());
-  }, [drive]);
-
-  const files = drive ? (MOCK_CLOUD_FILES[drive.id] ?? []) : [];
-
-  const toggle = (id: string): void => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  };
-
-  return (
-    <Dialog open={drive !== null} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl" onOpenAutoFocus={(e) => e.preventDefault()}>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {drive && (
-              <>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={drive.icon} alt="" className="size-5" />
-                Add from {drive.name}
-              </>
-            )}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="flex max-h-80 flex-col overflow-y-auto">
-          {files.map((file) => {
-            const added = attachedIds.has(file.id);
-            return (
-              <label
-                key={file.id}
-                className={cn(
-                  "flex items-center gap-3 rounded-md p-2",
-                  added ? "cursor-default opacity-60" : "cursor-pointer hover:bg-muted",
-                )}
-              >
-                <Checkbox
-                  checked={added || selected.has(file.id)}
-                  disabled={added}
-                  onCheckedChange={() => toggle(file.id)}
-                />
-                <IconFile className="icon shrink-0 text-muted-foreground" />
-                <span className="min-w-0 flex-1 truncate">{file.name}</span>
-                {added && <span className="text-2xs text-muted-foreground">Added</span>}
-              </label>
-            );
-          })}
-        </div>
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline">Cancel</Button>
-          </DialogClose>
-          <Button
-            disabled={selected.size === 0}
-            onClick={() => {
-              if (!drive) return;
-              onAdd(
-                drive,
-                files.filter((f) => selected.has(f.id)),
-              );
-              onOpenChange(false);
-            }}
-          >
-            Add {selected.size > 0 ? selected.size : ""} file{selected.size === 1 ? "" : "s"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Selected integrations stack — overlapping icon chips next to Files and
 // Sources. Hover peeks the enabled list; click opens the toggle menu.
 // ---------------------------------------------------------------------------
@@ -1237,7 +1119,7 @@ function V3SourcesDropdown({
   connectedIntegrations,
   integrationsOff,
   onToggleIntegration,
-  onPickCloudFiles,
+  onAddFromCloud,
 }: {
   onAddFiles: () => void;
   selectedSources: Set<string>;
@@ -1245,7 +1127,7 @@ function V3SourcesDropdown({
   connectedIntegrations: DemoIntegrationItem[];
   integrationsOff: Set<string>;
   onToggleIntegration: (id: string, enabled: boolean) => void;
-  onPickCloudFiles: (drive: DemoIntegrationItem) => void;
+  onAddFromCloud: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [integrationsOpen, setIntegrationsOpen] = useState(false);
@@ -1321,23 +1203,17 @@ function V3SourcesDropdown({
             Attach files
           </div>
 
-          {/* Add from connected cloud drives (mock file picker) */}
-          {connectedIntegrations
-            .filter((item) => CLOUD_DRIVE_IDS.includes(item.id))
-            .map((item) => (
-              <div
-                key={item.id}
-                className={itemClass}
-                onClick={() => {
-                  setOpen(false);
-                  onPickCloudFiles(item);
-                }}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={item.icon} alt="" className="icon size-4" />
-                Add from {item.name}
-              </div>
-            ))}
+          {/* Add from Cloud — production CloudDrive selector (mock-backed) */}
+          <div
+            className={itemClass}
+            onClick={() => {
+              setOpen(false);
+              onAddFromCloud();
+            }}
+          >
+            <UploadCloudIcon className="icon" />
+            Add from Cloud
+          </div>
 
           {/* Integrations — Claude-style: manage link + connected apps with per-chat toggles */}
           <Popover open={integrationsOpen} onOpenChange={setIntegrationsOpen}>
@@ -1615,7 +1491,7 @@ function V2ChatForm({
   connectedIntegrations,
   integrationsOff,
   onToggleIntegration,
-  onPickCloudFiles,
+  onAddFromCloud,
 }: {
   input: string;
   setInput: (v: string) => void;
@@ -1630,7 +1506,7 @@ function V2ChatForm({
   connectedIntegrations: DemoIntegrationItem[];
   integrationsOff: Set<string>;
   onToggleIntegration: (id: string, enabled: boolean) => void;
-  onPickCloudFiles: (drive: DemoIntegrationItem) => void;
+  onAddFromCloud: () => void;
 }) {
   const inputRef = useRef<HTMLDivElement>(null);
   const totalSources = mockFiles.length + selectedSources.size;
@@ -1717,7 +1593,7 @@ function V2ChatForm({
                   connectedIntegrations={connectedIntegrations}
                   integrationsOff={integrationsOff}
                   onToggleIntegration={onToggleIntegration}
-                  onPickCloudFiles={onPickCloudFiles}
+                  onAddFromCloud={onAddFromCloud}
                 />
 
                 <SelectedIntegrationsStack
@@ -1806,7 +1682,7 @@ export default function DemoChatV3Page() {
 
   // Connected apps are ON for the chat by default; this set tracks per-chat opt-outs.
   const [integrationsOff, setIntegrationsOff] = useState<Set<string>>(new Set());
-  const [cloudPickerDrive, setCloudPickerDrive] = useState<DemoIntegrationItem | null>(null);
+  const [cloudDialogOpen, setCloudDialogOpen] = useState(false);
   const handleToggleIntegration = useCallback((id: string, enabled: boolean) => {
     setIntegrationsOff((prev) => {
       const next = new Set(prev);
@@ -1948,19 +1824,18 @@ export default function DemoChatV3Page() {
     connectedIntegrations,
     integrationsOff,
     onToggleIntegration: handleToggleIntegration,
-    onPickCloudFiles: setCloudPickerDrive,
+    onAddFromCloud: () => setCloudDialogOpen(true),
   };
 
   const cloudPickerDialog = (
-    <CloudPickerDialog
-      drive={cloudPickerDrive}
+    <AddFromCloudDialog
+      open={cloudDialogOpen}
+      onOpenChange={setCloudDialogOpen}
+      connectedDrives={connectedIntegrations.filter((item) => CLOUD_DRIVE_IDS.includes(item.id))}
       attachedIds={new Set(mockFiles.map((f) => f.id))}
-      onOpenChange={(next) => {
-        if (!next) setCloudPickerDrive(null);
-      }}
-      onAdd={(drive, files) => {
+      onAdd={(driveName, files) => {
         setMockFiles((prev) => [...prev, ...files.filter((f) => !prev.some((p) => p.id === f.id))]);
-        toast.success(`${files.length} file${files.length === 1 ? "" : "s"} added from ${drive.name}`);
+        toast.success(`${files.length} file${files.length === 1 ? "" : "s"} added from ${driveName}`);
       }}
     />
   );
