@@ -1174,11 +1174,15 @@ function V3SourcesDropdown({
   selectedSources,
   onToggleSource,
   onAddFromCloud,
+  webSearchEnabled,
+  onToggleWebSearch,
 }: {
   onAddFiles: () => void;
   selectedSources: Set<string>;
   onToggleSource: (id: string) => void;
   onAddFromCloud: () => void;
+  webSearchEnabled: boolean;
+  onToggleWebSearch: (enabled: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -1242,6 +1246,23 @@ function V3SourcesDropdown({
           >
             <DownloadCloudIcon className="icon" />
             Add Cloud Files
+          </div>
+
+          {/* Web search — consolidated here from the standalone composer button */}
+          <div
+            className="relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 font-medium outline-none hover:bg-secondary hover:text-secondary-foreground"
+            onClick={() => onToggleWebSearch(!webSearchEnabled)}
+          >
+            <GlobeIcon className="icon" />
+            <span className="flex-1">Web Search</span>
+            <Switch
+              type="button"
+              size="sm"
+              checked={webSearchEnabled}
+              aria-label="Use Web Search"
+              onClick={(e) => e.stopPropagation()}
+              onCheckedChange={onToggleWebSearch}
+            />
           </div>
 
           {/* Knowledge Base section header */}
@@ -1458,6 +1479,8 @@ function V2ChatForm({
   integrationsOff,
   onToggleIntegration,
   onAddFromCloud,
+  webSearchEnabled,
+  onToggleWebSearch,
 }: {
   input: string;
   setInput: (v: string) => void;
@@ -1473,6 +1496,8 @@ function V2ChatForm({
   integrationsOff: Set<string>;
   onToggleIntegration: (id: string, enabled: boolean) => void;
   onAddFromCloud: () => void;
+  webSearchEnabled: boolean;
+  onToggleWebSearch: (enabled: boolean) => void;
 }) {
   const inputRef = useRef<HTMLDivElement>(null);
   const totalSources = mockFiles.length + selectedSources.size;
@@ -1557,6 +1582,8 @@ function V2ChatForm({
                   selectedSources={selectedSources}
                   onToggleSource={onToggleSource}
                   onAddFromCloud={onAddFromCloud}
+                  webSearchEnabled={webSearchEnabled}
+                  onToggleWebSearch={onToggleWebSearch}
                 />
 
                 <SelectedIntegrationsStack
@@ -1588,15 +1615,6 @@ function V2ChatForm({
                 </Button>
                 <div className="mx-auto" />
                 <div className="flex items-center gap-3">
-                  <Button
-                    size="icon-lg"
-                    type="button"
-                    className="shrink-0 rounded-full bg-avatar-blue-bg text-avatar-blue-fg hover:bg-avatar-blue-bg"
-                    onClick={() => toast.info("Demo mode: web search toggle disabled.")}
-                  >
-                    <GlobeIcon />
-                  </Button>
-                  <Separator orientation="vertical" className="h-5" />
                   <Button
                     size="icon-lg"
                     variant="ghost"
@@ -1646,6 +1664,7 @@ export default function DemoChatV3Page() {
   // Connected apps are ON for the chat by default; this set tracks per-chat opt-outs.
   const [integrationsOff, setIntegrationsOff] = useState<Set<string>>(new Set());
   const [cloudDialogOpen, setCloudDialogOpen] = useState(false);
+  const [webSearchEnabled, setWebSearchEnabled] = useState(true);
   const handleToggleIntegration = useCallback((id: string, enabled: boolean) => {
     setIntegrationsOff((prev) => {
       const next = new Set(prev);
@@ -1788,6 +1807,8 @@ export default function DemoChatV3Page() {
     integrationsOff,
     onToggleIntegration: handleToggleIntegration,
     onAddFromCloud: () => setCloudDialogOpen(true),
+    webSearchEnabled,
+    onToggleWebSearch: setWebSearchEnabled,
   };
 
   const cloudPickerDialog = (
