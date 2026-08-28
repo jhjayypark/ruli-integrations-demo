@@ -139,7 +139,9 @@ export function DemoLayoutProvider({
     const isAgentsDemo = demoPrefix === "/agents/demo";
     const dimOthers = isContractLensDemo || isAgentsDemo;
 
-    const result: Nav[] = [{ ...flatAssistant, disabled: dimOthers }];
+    // Assistant stays clickable from every demo — it jumps back to the
+    // assistant demo chat rather than dimming out like the other entries.
+    const result: Nav[] = [dimOthers ? { ...flatAssistant, href: "/assistant/demo/chat" } : flatAssistant];
     if (dataGrid) result.push({ ...dataGrid, disabled: dimOthers });
     const contractLensEntry = contractLens ?? {
       name: "Contract Lens",
